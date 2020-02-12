@@ -1,0 +1,51 @@
+body {
+    background-color: #2E3440;
+    color: #5E81AC;
+}
+
+table {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    align-content: stretch;
+}
+
+a {
+    color: #ECEFF4;
+}
+
+.main {
+    display: flex;
+	flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    align-content: stretch;
+}
+
+.isOk {
+    color: #A3BE8C;
+    font-weight: bold;
+}
+
+.isMeh {
+    color: #EBCB8B;
+    font-weight: bold;
+}
+
+.isNotOk {
+    color: #BF616A;
+    font-weight: bold;
+}
+
+.notCovered {
+    display: inline;
+    color: #BF616A;
+}
+
+.covered {
+    display: inline;
+    color: #A3BE8C;
+}
