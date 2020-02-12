@@ -138,7 +138,7 @@ function colorResult(taux) {
     return colors.self.VertClair
 }
 function createHTMLReport(url_file, excluded, size) {
-  const name = `${reportDir}/result-${path.basename(url_file)}.html`
+  const name = `${reportDir}/${path.basename(url_file)}.html`
   const file = url.fileURLToPath(url_file)
   fs.writeFileSync(name, `<!DOCTYPE html>
   <head><link rel="stylesheet" type="text/css" href="main.css"></head>
@@ -154,7 +154,7 @@ function createHTMLReport(url_file, excluded, size) {
     offsets.forEach(offset => fs.appendFileSync(name, `<div class=${offset.covered ? 'covered' : 'notCovered'}>${readWithOffsets(url_file, offset)}</div>`))
   }
   fs.appendFileSync(name, `</div></pre><div></body>`)
-  return 'result-' + path.basename(url_file) + '.html'
+  return path.basename(url_file) + '.html'
 }
 function createMissingOffset(excluded, size) {
   let offsets = []
