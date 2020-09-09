@@ -1,0 +1,22 @@
+{
+  "name": "not-c8",
+  "version": "0.9.0",
+  "description": "Module de codecoverage avec les outils natifs de node",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SanZos/not-c8.git"
+  },
+  "keywords": [
+    "CC"
+  ],
+  "author": "Antonin \"SanZos\" DUBOIS",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/SanZos/not-c8/issues"
+  },
+  "homepage": "https://github.com/SanZos/not-c8#readme"
+}
