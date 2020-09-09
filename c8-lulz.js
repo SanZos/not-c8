@@ -52,25 +52,28 @@ output.on('close', () => {
             size = file.ranges[0].endOffset
 
             const f = file.ranges.filter(isNotCovered)
-            let sb
-            while (sb = f.shift()) {
+            let sb = f.shift()
+            while (sb) {
               if (excluded.length === 0 || !comprisDans(excluded, sb)) {
                 excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
                 notCovered += sb.endOffset - sb.startOffset
               }
+              sb = f.shift()
             }
           }
         }
-        let a
-        while (a = r.functions.shift()) {
+        let a = r.functions.shift()
+        while (a) {
           const f = a.ranges.filter(isNotCovered)
-          let sb
-          while (sb = f.shift()) {
+          let sb = f.shift()
+          while (sb) {
             if (excluded.length === 0 || !comprisDans(excluded, sb)) {
               excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
               notCovered += sb.endOffset - sb.startOffset
             }
+            sb = f.shift()
           }
+          a = r.functions.shift()
         }
         const p = (100 - (notCovered / size * 100)).toFixed(2)
         console.log(`${path.basename(r.url)} => ${colorResult(p)}${p}%${colors.Reset}`)
@@ -89,7 +92,7 @@ function purge (resolve, reject) {
   fsp.writeFile(coverageDirectory + '/result-' + output.pid + '.json', '[').then(itterate)
   function itterate () {
     if ((c[i].url.search(/node_modules/g) === -1 && c[i].url.search('file://') !== -1) || keepInternals) {
-      if (fileIgnores.find(f => c[i].url.search(f) !== -1)) doNext()
+      if (fileIgnores.find(f => c[i].url.search(f) !== -1) || c[i].url.search(process.cwd()) === -1) doNext()
       else {
         fsp.appendFile(coverageDirectory + '/result-' + output.pid + '.json', (n ? '' : ',') + JSON.stringify(c[i])).then(doNext)
         n = false
