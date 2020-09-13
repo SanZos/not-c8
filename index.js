@@ -77,7 +77,9 @@ output.on('close', () => {
         }
         const p = (100 - (notCovered / size * 100)).toFixed(2)
         console.log(`${path.basename(r.url)} => ${colorResult(p)}${p}%${colors.Reset}`)
-        excluded.forEach(offset => console.log(`${offset.startOffset} - Code non couvert :\r\n${colors.self.RougeClair}- ${readWithOffsets(r.url, offset)}${colors.Reset}`))
+        const fd = fs.openSync(file, 'r')
+        const fileContent = fs.readFileSync(fd).toString()
+        excluded.forEach(offset => console.log(`${offset.startOffset} - Code non couvert :\r\n${colors.self.RougeClair}- ${fileContent.substring(offset.startOffset, offset.endOffset)}${colors.Reset}`))
         index.push({ file: createHTMLReport(r.url, excluded, size), covered: p })
       })
       createHTMLIndex(index)
@@ -119,18 +121,6 @@ function comprisDans (isIn, match) {
     return (v.startOffset < match.endOffset && match.endOffset < v.endOffset)
   }) !== undefined
 }
-function readWithOffsets (file, offsets) {
-  file = path.resolve(url.fileURLToPath(file))
-  const length = offsets.endOffset - offsets.startOffset + 1
-  if (length < 1) {
-    console.log(`Erreur d'offsets pour ${file} ${offsets.startOffset} ${offsets.endOffset}`)
-    return
-  }
-  const fd = fs.openSync(file, 'r')
-  const buffer = Buffer.alloc(length)
-  fs.readSync(fd, buffer, 0, length, offsets.startOffset)
-  return buffer.toString()
-}
 function colorResult (taux) {
   if (taux < 30) return colors.self.RougeClair
   else if (taux < 80) return colors.fg.Yellow
@@ -150,7 +140,9 @@ function createHTMLReport (urlFile, excluded, size) {
     fs.appendFileSync(name, fs.readFileSync(file))
   } else {
     const offsets = createMissingOffset(excluded, size)
-    offsets.forEach(offset => fs.appendFileSync(name, `<div class=${offset.covered ? 'covered' : 'notCovered'}>${readWithOffsets(urlFile, offset)}</div>`))
+    const fd = fs.openSync(file, 'r')
+    const fileContent = fs.readFileSync(fd).toString()
+    offsets.forEach(offset => fs.appendFileSync(name, `<div class=${offset.covered ? 'covered' : 'notCovered'}>${fileContent.substring(offset.startOffset, offset.endOffset)}</div>`))
   }
   fs.appendFileSync(name, '</div></pre><div></body>')
   return path.basename(urlFile) + '.html'
@@ -164,7 +156,7 @@ function createMissingOffset (excluded, size) {
     offsets.push(Object.assign({ covered: false }, excluded.shift()))
     if (excluded.length > 0 && offsets[offsets.length - 1].endOffset !== excluded[0].startOffset) {
       offsets.push({ startOffset: offsets[offsets.length - 1].endOffset + 1, endOffset: excluded[0].startOffset - 1, covered: true })
-    } else if (excluded.length === 0) {
+    } else if (excluded.length === 0 && offsets[offsets.length - 1].endOffset + 1 < size) {
       offsets.push({ startOffset: offsets[offsets.length - 1].endOffset + 1, endOffset: size, covered: true })
     }
   }
