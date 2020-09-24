@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const fs = require('fs')
 const fsp = fs.promises
 const path = require('path')
@@ -25,68 +26,22 @@ output.on('close', () => {
   clearTimeout(to)
   clearInterval(v)
   const tac = Date.now()
-  const index = ['']
   console.log(`\nExecution de ${argv[0]} en ${tac - tbc} ms`)
   fsp.readdir(coverageDirectory)
-    .then(ad => {
-      exist = false
-      if (ad.length <= 0) return
-      ad.forEach(d => {
-        if (d.startsWith(`coverage-${output.pid}`)) exist = coverageDirectory + '/' + d
-      })
-      if (exist) {
-        return new Promise(purge)
-      }
-    })
-    .then(() => {
-      const cr = require(coverageDirectory + '/result-' + output.pid + '.json')
-      cr.forEach((r) => {
-        const file = r.functions.shift()
-        let size = 0
-        let notCovered = 0
-        const excluded = []
-        if (file.isBlockCoverage) {
-          if (file.ranges.length === 1) {
-            size = file.ranges[0].endOffset
-          } else {
-            size = file.ranges[0].endOffset
-
-            const f = file.ranges.filter(isNotCovered)
-            let sb = f.shift()
-            while (sb) {
-              if (excluded.length === 0 || !comprisDans(excluded, sb)) {
-                excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
-                notCovered += sb.endOffset - sb.startOffset
-              }
-              sb = f.shift()
-            }
-          }
-        }
-        let a = r.functions.shift()
-        while (a) {
-          const f = a.ranges.filter(isNotCovered)
-          let sb = f.shift()
-          while (sb) {
-            if (excluded.length === 0 || !comprisDans(excluded, sb)) {
-              excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
-              notCovered += sb.endOffset - sb.startOffset
-            }
-            sb = f.shift()
-          }
-          a = r.functions.shift()
-        }
-        const p = (100 - (notCovered / size * 100)).toFixed(2)
-        console.log(`${path.basename(r.url)} => ${colorResult(p)}${p}%${colors.Reset}`)
-        const fd = fs.openSync(file, 'r')
-        const fileContent = fs.readFileSync(fd).toString()
-        excluded.forEach(offset => console.log(`${offset.startOffset} - Code non couvert :\r\n${colors.self.RougeClair}- ${fileContent.substring(offset.startOffset, offset.endOffset)}${colors.Reset}`))
-        index.push({ file: createHTMLReport(r.url, excluded, size), covered: p })
-      })
-      createHTMLIndex(index)
-      fsp.unlink(coverageDirectory + '/result-' + output.pid + '.json')
-    })
+    .then(getCoverageFile)
+    .then(createReport)
 })
-function purge (resolve, reject) {
+function getCoverageFile (ad) {
+  exist = false
+  if (ad.length <= 0) return
+  ad.forEach(d => {
+    if (d.startsWith(`coverage-${output.pid}`)) exist = coverageDirectory + '/' + d
+  })
+  if (exist) {
+    return new Promise(filterFile)
+  }
+}
+function filterFile (resolve, reject) {
   console.log(process.cwd(), __dirname, exist)
   const c = require(exist).result
   let i = 0
@@ -109,6 +64,60 @@ function purge (resolve, reject) {
     }
   }
 }
+function createReport () {
+  const index = ['']
+  const cr = require(coverageDirectory + '/result-' + output.pid + '.json')
+  cr.forEach((r) => {
+    let block = r.functions.shift()
+    const fd = fs.openSync(url.fileURLToPath(r.url), 'r')
+    const fileContent = fs.readFileSync(fd).toString()
+
+    let size = 0
+    let notCovered = 0
+
+    const excluded = []
+    if (block.isBlockCoverage) {
+      if (block.ranges.length === 1) {
+        size = block.ranges[0].endOffset
+      } else {
+        size = block.ranges[0].endOffset
+
+        const f = block.ranges.filter(isNotCovered)
+        let sb = f.shift()
+        while (sb) {
+          if (excluded.length === 0 || !comprisDans(excluded, sb)) {
+            if (extractOffset(fileContent, sb) !== null) {
+              excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
+              notCovered += sb.endOffset - sb.startOffset
+            }
+          }
+          sb = f.shift()
+        }
+      }
+    }
+    block = r.functions.shift()
+    while (block) {
+      const f = block.ranges.filter(isNotCovered)
+      let sb = f.shift()
+      while (sb) {
+        if (excluded.length === 0 || !comprisDans(excluded, sb)) {
+          if (extractOffset(fileContent, sb) !== null) {
+            excluded.push({ startOffset: sb.startOffset, endOffset: sb.endOffset })
+            notCovered += sb.endOffset - sb.startOffset
+          }
+        }
+        sb = f.shift()
+      }
+      block = r.functions.shift()
+    }
+    const p = (100 - (notCovered / size * 100)).toFixed(2)
+    console.log(`${path.basename(r.url)} => ${colorResult(p)}${p}%${colors.Reset}`)
+    excluded.forEach(offset => console.log(`${offset.startOffset} -> ${offset.endOffset} - Code non couvert :\r\n${colors.self.RougeClair}- ${extractOffset(fileContent, offset)}${colors.Reset}`))
+    index.push({ file: createHTMLReport(r.url, excluded, size), covered: p })
+  })
+  createHTMLIndex(index)
+  fsp.unlink(coverageDirectory + '/result-' + output.pid + '.json')
+}
 function isCovered (m) {
   return m.count > 0
 }
@@ -126,6 +135,12 @@ function colorResult (taux) {
   else if (taux < 80) return colors.fg.Yellow
   else return colors.self.VertClair
 }
+function extractOffset (fileContent, offset) {
+  console.log(offset)
+  const content = fileContent.substring(offset.startOffset, offset.covered === false ? offset.endOffset + 1 : offset.endOffset)
+  if (content.trim() === '') return null
+  else return content
+}
 function createHTMLReport (urlFile, excluded, size) {
   const name = `${reportDir}/${path.basename(urlFile)}.html`
   const file = url.fileURLToPath(urlFile)
@@ -142,7 +157,7 @@ function createHTMLReport (urlFile, excluded, size) {
     const offsets = createMissingOffset(excluded, size)
     const fd = fs.openSync(file, 'r')
     const fileContent = fs.readFileSync(fd).toString()
-    offsets.forEach(offset => fs.appendFileSync(name, `<div class=${offset.covered ? 'covered' : 'notCovered'}>${fileContent.substring(offset.startOffset, offset.endOffset)}</div>`))
+    offsets.forEach(offset => fs.appendFileSync(name, `<div class=${offset.covered ? 'covered' : 'notCovered'}>${extractOffset(fileContent, offset)}</div>`))
   }
   fs.appendFileSync(name, '</div></pre><div></body>')
   return path.basename(urlFile) + '.html'
@@ -150,12 +165,12 @@ function createHTMLReport (urlFile, excluded, size) {
 function createMissingOffset (excluded, size) {
   const offsets = []
   if (excluded[0].startOffset !== 0) {
-    offsets.push({ startOffset: 0, endOffset: excluded[0].startOffset - 1, covered: true })
+    offsets.push({ startOffset: 0, endOffset: excluded[0].startOffset, covered: true })
   }
   while (excluded.length > 0) {
     offsets.push(Object.assign({ covered: false }, excluded.shift()))
     if (excluded.length > 0 && offsets[offsets.length - 1].endOffset !== excluded[0].startOffset) {
-      offsets.push({ startOffset: offsets[offsets.length - 1].endOffset + 1, endOffset: excluded[0].startOffset - 1, covered: true })
+      offsets.push({ startOffset: offsets[offsets.length - 1].endOffset + 1, endOffset: excluded[0].startOffset, covered: true })
     } else if (excluded.length === 0 && offsets[offsets.length - 1].endOffset + 1 < size) {
       offsets.push({ startOffset: offsets[offsets.length - 1].endOffset + 1, endOffset: size, covered: true })
     }

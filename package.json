@@ -3,6 +3,7 @@
   "version": "0.9.0",
   "description": "Module de codecoverage avec les outils natifs de node",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
