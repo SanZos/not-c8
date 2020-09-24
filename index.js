@@ -136,7 +136,6 @@ function colorResult (taux) {
   else return colors.self.VertClair
 }
 function extractOffset (fileContent, offset) {
-  console.log(offset)
   const content = fileContent.substring(offset.startOffset, offset.covered === false ? offset.endOffset + 1 : offset.endOffset)
   if (content.trim() === '') return null
   else return content
